@@ -339,7 +339,7 @@
             const json = {};
             sprites.forEach(s => s.enabled && (json[s.name] = {x: s.x, y: s.y, w: s.w, h: s.h}));
             document.querySelector("#json").value = JSON.stringify(json);
-            const sprIn = sprites.map(s => `<!--suppress ALL --><br><div class="sprite"><input onchange="sprites.find(s=>s.name==='${s.name}').enabled=event.target.checked" type="checkbox"> <div class="n">${s.name}</div>: ${s.x},${s.y},${s.w},${s.h}</div>`).join("");
+            const sprIn = sprites.map(s => `<!--suppress ALL --><br><div class="sprite"><input onchange="sprites.find(s=>s.name==='${s.name}').enabled=event.target.checked" type="checkbox"> <div class="n">${s.name}</div>: ${s.x},${s.y},${s.w},${s.h}<button onclick="sprites=sprites.filter(s=>s.name!=='${s.name}')">Remove</button></div>`).join("");
             if (sprIn !== document.querySelector("#sprites").innerHTML) document.querySelector("#sprites").innerHTML = sprIn;
             const rects = document.querySelector("#rects");
             Array.from(rects.children).forEach(i => i.remove());
