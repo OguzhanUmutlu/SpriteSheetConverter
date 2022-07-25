@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sprite Sheet Converter</title>
+</head>
+<body>
+<div class="editor">
+    <div class="img"><img draggable="false" alt="" src="">
+        <div class="rect" id="rect"></div>
+        <div id="rects"></div>
+    </div>
+    <div class="waiting">Waiting image...</div>
+</div>
+<div class="top"></div>
+<button class="upload" onclick="uploadImage()">Upload image</button>
+<div class="right">
+    <div class="contents">
+        Move: right click drag<br>
+        Center: double click<br>
+        Move current sprite: arrow keys<br>
+        Enlarge current sprite: Shift + arrow keys<br>
+        <div hidden id="rect-input">
+            <br>
+            <label for="x">X: <input id="x" type="number" class="input"></label><br>
+            <label for="y">Y: <input id="y" type="number" class="input"></label><br>
+            <label for="w">Width: <input id="w" type="number" class="input"></label><br>
+            <label for="h">Height: <input id="h" type="number" class="input"></label><br>
+            <label for="name">Name for sprite: <input id="name" type="text" class="input"></label><br>
+            <button onclick="addSprite()">Add</button>
+        </div>
+        <div hidden id="image-input">
+            <br><br>
+            <label for="json">JSON: <textarea readonly id="json">{}</textarea></label><br>
+            Toggle sprites:
+            <div id="sprites"></div>
+        </div>
+        <br><br>
+        <label for="background-color">Background color: <input id="background-color" type="color"
+                                                               value="#c4c4c4"></label>
+    </div>
+</div>
+<div class="loading" hidden><span>Loading image...</span></div>
+<input id="upload" type="file" hidden>
+</body>
+<style>
+    * {
+        font-family: Arial, serif;
+        user-select: none;
+        overflow: hidden;
+    }
+
+    .editor {
+        position: absolute;
+        left: 0;
+        top: 50px;
+        width: calc(80% - 1px);
+        height: calc(100% - 51px);
+        border-top: 1px solid black;
+        border-right: 1px solid black;
+        background: #c4c4c4;
+    }
+
+    .top {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 50px;
+        background: white;
+    }
+
+    .right {
+        position: absolute;
+        left: 80%;
+        top: 0;
+        width: 20%;
+        max-width: 20%;
+        height: 100%;
+        background: white;
+    }
+
+    button {
+        position: absolute;
+        background: none;
+        border-radius: 5px;
+        padding: 10px;
+        border: 1px solid black;
+        cursor: pointer;
+        transition: transform .1s ease-in-out;
+    }
+
+    button:hover {
+        background: #b4b4b4;
+        transform: scale(1.02);
+    }
+
+    img {
+        image-rendering: pixelated;
+        border: 1px solid black;
+    }
+
+    .img {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: fit-content;
+        height: fit-content;
+        transform-origin: top left;
+        transform: scale(1) translate(-50%, -50%);
+        image-rendering: pixelated;
+    }
+
+    .rect {
+        background-color: rgba(0, 0, 0, 0.2);
+        position: absolute;
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        pointer-events: none;
+        /*animation: ease-in-out infinite;
+        animation-name: outline;
+        animation-duration: 1s;*/
+    }
+
+    .right > .contents {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 100%;
+        text-align: center;
+    }
+
+    .loading {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .loading > span {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 30px;
+    }
+
+    .waiting {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 30px;
+        background: #c4c4c4;
+    }
+
+    .input {
+        width: 50px;
+        text-align: center;
+        border: 1px solid black;
+        outline: none;
+    }
+
+    .sprite {
+        display: flex;
+    }
+
+    @keyframes outline {
+        0% {
+            outline-color: rgba(0, 0, 0, 1);
+        }
+
+        50% {
+            outline-color: rgba(0, 0, 0, 0);
+        }
+
+        100% {
+            outline-color: rgba(0, 0, 0, 1);
+        }
+    }
+</style>
+<script>
+    /*** @type {HTMLDivElement} */
+    const editor = document.querySelector(".editor");
+    const image = document.querySelector("img");
+    /*** @type {HTMLDivElement} */
+    const imageDiv = document.querySelector(".img");
+    /*** @type {HTMLDivElement} */
+    const waiting = document.querySelector(".waiting");
+    /*** @type {HTMLDivElement} */
+    const rect = document.querySelector("#rect");
+    let zoom = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let cameraVel = {x: 0, y: 0};
+    const update = () => {
+        imageDiv.style.transform = `scale(${zoom}) translate(${translateX ? `calc(-50% ${translateX < 0 ? "-" : "+"} ${Math.abs(translateX)}px)` : `-50%`}, ${translateY ? `calc(-50% ${translateY < 0 ? "-" : "+"} ${Math.abs(translateY)}px)` : `-50%`})`;
+        waiting.hidden = isImageLoaded();
+    };
+    const setZoom = z => update(zoom = Math.min(20, Math.max(z, 0.1))) || 1;
+    const addZoom = z => update(setZoom(zoom + z));
+    editor.addEventListener("wheel", ev => addZoom(ev.deltaY / -1000));
+    let mouseDown = false;
+    editor.addEventListener("mousedown", ev => {
+        if (ev.button !== 2) return;
+        mouseDown = true;
+        update();
+    });
+    editor.addEventListener("mousemove", ev => {
+        if (mouseDown && isImageLoaded()) {
+            cameraVel.x += ev.movementX / zoom;
+            cameraVel.y += ev.movementY / zoom;
+            update();
+        }
+    });
+    editor.addEventListener("mouseup", ev => ev.button === 2 && (mouseDown = false));
+    editor.addEventListener("mouseleave", () => mouseDown = false);
+    editor.addEventListener("dblclick", () => {
+        translateX = 0;
+        translateY = 0;
+        update();
+    });
+    let imgRect = [];
+    let sprites = [];
+    editor.addEventListener("blur", () => mouseDown = false);
+    addEventListener("contextmenu", ev => ev.preventDefault());
+    const isImageLoaded = () => image.naturalWidth && image.naturalHeight;
+    const resetEditor = () => {
+        translateX = 0;
+        translateY = 0;
+        setZoom(1);
+        update();
+        imgRect = [];
+        sprites = [];
+    };
+    resetEditor();
+    /*** @type {HTMLInputElement} */
+    const upload = document.querySelector("#upload");
+    const uploadImage = () => {
+        upload.value = "";
+        upload.click();
+    };
+    let curImgId = "";
+    upload.addEventListener("change", () => {
+        const file = upload.files[0];
+        if (file) {
+            if (isImageLoaded() && !confirm("If you continue current sprite sheet will be deleted. Continue?")) return;
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                curImgId = reader.result.toString();
+                image.src = curImgId;
+                resetEditor();
+                requestAnimationFrame(update);
+            });
+            reader.readAsDataURL(file);
+        }
+    });
+    let imgMouseDown = false;
+    const imageMouseDown = ev => {
+        if (ev.button === 0) {
+            if (ev.offsetX < 0 || ev.offsetY < 0 || ev.offsetX > image.naturalWidth || ev.offsetY > image.naturalHeight) return;
+            imgMouseDown = true;
+            imgRect = [[ev.offsetX, ev.offsetY]];
+        }
+    };
+    const imageMouseMove = ev => imgMouseDown && ev.offsetX >= 0 && ev.offsetY >= 0 && ev.offsetX <= image.naturalWidth && ev.offsetY <= image.naturalHeight && (imgRect[1] = [ev.offsetX, ev.offsetY]);
+    image.addEventListener("mousedown", imageMouseDown);
+    image.addEventListener("mousemove", imageMouseMove);
+    rect.addEventListener("mousedown", ev => imageMouseDown({
+        offsetX: ev.offsetX + startX(),
+        offsetY: ev.offsetY + startY()
+    }));
+    rect.addEventListener("mousemove", ev => imageMouseMove({
+        offsetX: ev.offsetX + startX(),
+        offsetY: ev.offsetY + startY()
+    }));
+    addEventListener("mouseup", ev => ev.button === 0 && (imgMouseDown = false));
+    addEventListener("blur", () => imgMouseDown = false);
+    let heldKeys = {};
+    addEventListener("keydown", ev => heldKeys[ev.key.toLowerCase()] = true);
+    addEventListener("keyup", ev => delete heldKeys[ev.key.toLowerCase()]);
+    addEventListener("blur", () => heldKeys = {});
+    const startX = () => Math.min(imgRect[0][0], imgRect[1][0]);
+    const startY = () => Math.min(imgRect[0][1], imgRect[1][1]);
+    const endX = () => Math.max(imgRect[0][0], imgRect[1][0]);
+    const endY = () => Math.max(imgRect[0][1], imgRect[1][1]);
+    const move = {left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1]};
+    const moveRect = () => {
+        if (rect.hidden || document.activeElement.tagName === "INPUT") return;
+        Object.keys(move).forEach(k => {
+            if (heldKeys["arrow" + k]) {
+                const bf = JSON.parse(JSON.stringify(imgRect));
+                if (!heldKeys["shift"]) imgRect[0][0] += move[k][0];
+                imgRect[1][0] += move[k][0];
+                if (!heldKeys["shift"]) imgRect[0][1] += move[k][1];
+                imgRect[1][1] += move[k][1];
+                if (startX() < 1 || startY() < 1 || endX() - 1 > image.width || endY() - 1 > image.height) imgRect = bf;
+            }
+        });
+    };
+    let befRect = null;
+    const animate = () => {
+        requestAnimationFrame(animate);
+        if (isImageLoaded()) {
+            translateX += cameraVel.x / 10;
+            translateY += cameraVel.y / 10;
+            cameraVel.x *= 0.9;
+            cameraVel.y *= 0.9;
+            update();
+        }
+        const bg = document.querySelector("#background-color").value;
+        waiting.style.backgroundColor = bg;
+        editor.style.backgroundColor = bg;
+        document.querySelector("#rect-input").hidden = rect.hidden = !isImageLoaded() || !imgRect || !imgRect[0] || !imgRect[1];
+        document.querySelector("#image-input").hidden = !isImageLoaded();
+        if (!rect.hidden) {
+            const w = endX() - startX();
+            const h = endY() - startY();
+            rect.style.left = startX() + "px";
+            rect.style.top = startY() + "px";
+            rect.style.width = w + "px";
+            rect.style.height = h + "px";
+            if (JSON.stringify(befRect) !== JSON.stringify(imgRect)) {
+                befRect = JSON.parse(JSON.stringify(imgRect));
+                document.querySelector("#x").value = startX();
+                document.querySelector("#y").value = startY();
+                document.querySelector("#w").value = endX() - startX();
+                document.querySelector("#h").value = endY() - startY();
+            }
+            document.querySelector("#name").value = [...document.querySelector("#name").value].filter(i => /[\da-zA-Z]/.test(i)).join("");
+        }
+        if (isImageLoaded()) {
+            const json = {};
+            sprites.forEach(s => s.enabled && (json[s.name] = {x: s.x, y: s.y, w: s.w, h: s.h}));
+            document.querySelector("#json").value = JSON.stringify(json);
+            const sprIn = sprites.map(s => `<!--suppress ALL --><br><div class="sprite"><input onchange="sprites.find(s=>s.name==='${s.name}').enabled=event.target.checked" type="checkbox"> <div class="n">${s.name}</div>: ${s.x},${s.y},${s.w},${s.h}</div>`).join("");
+            if (sprIn !== document.querySelector("#sprites").innerHTML) document.querySelector("#sprites").innerHTML = sprIn;
+            const rects = document.querySelector("#rects");
+            Array.from(rects.children).forEach(i => i.remove());
+            sprites.forEach(s => {
+                if (!s.enabled) return;
+                const d = document.createElement("div");
+                d.classList.add("rect");
+                d.style.left = s.x + "px";
+                d.style.right = s.y + "px";
+                d.style.width = s.w + "px";
+                d.style.height = s.h + "px";
+                rects.appendChild(d);
+            });
+        }
+        moveRect();
+    };
+    const addSprite = () => {
+        const name = document.querySelector("#name").value;
+        if (sprites.find(s => s.name === name) && !confirm("There is already a sprite called \"" + name + "\", do you want to overwrite it?")) return;
+        sprites = sprites.filter(s => s.name !== name);
+        const x = startX();
+        const y = startY();
+        const w = endX() - startX();
+        const h = endY() - startY();
+        sprites.push({enabled: false, name, x, y, w, h});
+        imgRect = [];
+    };
+    ["x", "y", "w", "h"].forEach(i => {
+        const inp = document.querySelector("#" + i);
+        inp.addEventListener("change", () => {
+            imgRect = [[startX(), startY()], [endX(), endY()]];
+            const v = inp.value * 1;
+            if (isNaN(v) || v < 0 || v > image.width) return;
+            const w = endX() - startX();
+            const h = endY() - startY();
+            switch (i) {
+                case "x":
+                    imgRect[0][0] = v;
+                    imgRect[1][0] = v + w;
+                    break;
+                case "y":
+                    imgRect[0][1] = v;
+                    imgRect[1][1] = v + h;
+                    break;
+                case "w":
+                    imgRect[1][0] = v + startX();
+                    break;
+                case "h":
+                    imgRect[1][1] = v + startY();
+                    break;
+            }
+        });
+    });
+    animate();
+</script>
+</html>
