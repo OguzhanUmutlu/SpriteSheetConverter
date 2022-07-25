@@ -31,7 +31,7 @@
         </div>
         <div hidden id="image-input">
             <br><br>
-            <label for="json">JSON: <textarea readonly id="json">{}</textarea></label><br>
+            <label for="result"><select id="result-type"><option value="json">JSON</option><option value="yaml">YAML</option></select>: <textarea readonly id="result"></textarea></label><br>
             Toggle sprites:
             <div id="sprites"></div>
         </div>
@@ -340,9 +340,21 @@
             document.querySelector("#name").value = [...document.querySelector("#name").value].filter(i => /[\da-zA-Z]/.test(i)).join("");
         }
         if (isImageLoaded()) {
-            const json = {};
-            sprites.forEach(s => s.enabled && (json[s.name] = {x: s.x, y: s.y, w: s.w, h: s.h}));
-            document.querySelector("#json").value = JSON.stringify(json);
+            const resultType = document.querySelector("#result-type").value;
+            let result;
+            switch(resultType){
+                case"json":
+                    const json = {};
+                    sprites.forEach(s => s.enabled && (json[s.name] = {x: s.x, y: s.y, w: s.w, h: s.h}));
+                    result = JSON.stringify(json);
+                    break;
+                case "yaml":
+                    const yaml = [];
+                    sprites.forEach(s => s.enabled && yaml.push(`${s.name}:\n  x: ${s.x}\n  y: ${s.y}\n  w: ${s.w}\n  h: ${s.h}`));
+                    result = yaml.join("\n");
+                    break;
+            }
+            document.querySelector("#result").value = result;
             const rects = document.querySelector("#rects");
             Array.from(rects.children).forEach(i => i.remove());
             sprites.forEach(s => {
