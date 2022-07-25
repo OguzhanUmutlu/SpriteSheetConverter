@@ -366,7 +366,7 @@
                 document.querySelector("#w").value = endX() - startX();
                 document.querySelector("#h").value = endY() - startY();
             }
-            document.querySelector("#name").value = [...document.querySelector("#name").value].filter(i => /[\da-zA-Z]/.test(i)).join("");
+            document.querySelector("#name").value = [...document.querySelector("#name").value].filter(i => /[\da-zA-Z- ]/.test(i)).join("");
         }
         if (isImageLoaded()) {
             const resultType = document.querySelector("#result-type").value;
