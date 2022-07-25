@@ -9,6 +9,7 @@
     <div class="img"><img draggable="false" alt="" src="">
         <div class="rect" id="rect"></div>
         <div id="rects"></div>
+        <canvas class="pixels"></canvas>
     </div>
     <div class="waiting">Waiting image...</div>
 </div>
@@ -31,9 +32,14 @@
         </div>
         <div hidden id="image-input">
             <br><br>
-            <label for="result"><select id="result-type"><option value="json">JSON</option><option value="yaml">YAML</option></select>: <textarea readonly id="result"></textarea></label><br>
+            <label for="result"><select id="result-type">
+                <option value="json">JSON</option>
+                <option value="yaml">YAML</option>
+            </select>: <textarea readonly id="result"></textarea></label><br>
             <label><!--suppress JSDeprecatedSymbols -->
-                <input type="checkbox" checked onchange="document.querySelector('#sprites').style.display = event.target.checked ? 'block' : 'none'"></label> Sprites:
+                <input type="checkbox" checked
+                       onchange="document.querySelector('#sprites').style.display = event.target.checked ? 'block' : 'none'"></label>
+            Sprites:
             <div id="sprites"></div>
         </div>
         <br><br>
@@ -126,6 +132,15 @@
         animation-duration: 1s;*/
     }
 
+    .pixels {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 5px);
+        pointer-events: none;
+    }
+
     .right > .contents {
         position: absolute;
         top: 50%;
@@ -197,6 +212,17 @@
     const waiting = document.querySelector(".waiting");
     /*** @type {HTMLDivElement} */
     const rect = document.querySelector("#rect");
+    /*** @type {HTMLCanvasElement} */
+    const pixels = document.querySelector(".pixels");
+    const makePixels = () => {
+        const r = pixels.getBoundingClientRect();
+        pixels.width = r.width;
+        pixels.height = r.height;
+        if (zoom < 5) return;
+        const ctx = pixels.getContext("2d");
+        for (let x = 0; x < pixels.width; x += zoom) ctx.fillRect(x, 0, 1, pixels.height);
+        for (let y = 0; y < pixels.height; y += zoom) ctx.fillRect(0, y, pixels.width, 1);
+    };
     let zoom = 1;
     let translateX = 0;
     let translateY = 0;
@@ -204,6 +230,7 @@
     const update = () => {
         imageDiv.style.transform = `scale(${zoom}) translate(${translateX ? `calc(-50% ${translateX < 0 ? "-" : "+"} ${Math.abs(translateX)}px)` : `-50%`}, ${translateY ? `calc(-50% ${translateY < 0 ? "-" : "+"} ${Math.abs(translateY)}px)` : `-50%`})`;
         waiting.hidden = isImageLoaded();
+        makePixels();
     };
     const setZoom = z => update(zoom = Math.min(20, Math.max(z, 0.1))) || 1;
     const addZoom = z => update(setZoom(zoom + z));
@@ -344,7 +371,7 @@
         if (isImageLoaded()) {
             const resultType = document.querySelector("#result-type").value;
             let result;
-            switch(resultType){
+            switch (resultType) {
                 case"json":
                     const json = {};
                     sprites.forEach(s => s.enabled && (json[s.name] = {x: s.x, y: s.y, w: s.w, h: s.h}));
