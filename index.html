@@ -32,7 +32,8 @@
         <div hidden id="image-input">
             <br><br>
             <label for="result"><select id="result-type"><option value="json">JSON</option><option value="yaml">YAML</option></select>: <textarea readonly id="result"></textarea></label><br>
-            Toggle sprites:
+            <label><!--suppress JSDeprecatedSymbols -->
+                <input type="checkbox" checked onchange="document.querySelector('#sprites').style.display = event.target.checked ? 'block' : 'none'"></label> Sprites:
             <div id="sprites"></div>
         </div>
         <br><br>
