@@ -13,7 +13,7 @@
     <div class="waiting">Waiting image...</div>
 </div>
 <div class="top"></div>
-<button class="upload" onclick="uploadImage()">Upload image</button>
+<button class="upload button" onclick="uploadImage()">Upload image</button>
 <div class="right">
     <div class="contents">
         Move: right click drag<br>
@@ -80,7 +80,7 @@
         background: white;
     }
 
-    button {
+    .button {
         position: absolute;
         background: none;
         border-radius: 5px;
@@ -90,7 +90,7 @@
         transition: transform .1s ease-in-out;
     }
 
-    button:hover {
+    .button:hover {
         background: #b4b4b4;
         transform: scale(1.02);
     }
@@ -304,6 +304,10 @@
             }
         });
     };
+    const updateSprites = () => {
+        const sprIn = sprites.map(s => `<!--suppress ALL --><br><div class="sprite"><input onchange="sprites.find(s=>s.name==='${s.name}').enabled=event.target.checked;updateSprites()" type="checkbox"${s.enabled ? " checked" : ""}> <div class="n">${s.name}</div>: ${s.x},${s.y},${s.w},${s.h}<button onclick="sprites=sprites.filter(s=>s.name!=='${s.name}');updateSprites()">Remove</button></div>`).join("");
+        if (sprIn !== document.querySelector("#sprites").innerHTML) document.querySelector("#sprites").innerHTML = sprIn;
+    };
     let befRect = null;
     const animate = () => {
         requestAnimationFrame(animate);
@@ -339,8 +343,6 @@
             const json = {};
             sprites.forEach(s => s.enabled && (json[s.name] = {x: s.x, y: s.y, w: s.w, h: s.h}));
             document.querySelector("#json").value = JSON.stringify(json);
-            const sprIn = sprites.map(s => `<!--suppress ALL --><br><div class="sprite"><input onchange="sprites.find(s=>s.name==='${s.name}').enabled=event.target.checked" type="checkbox"> <div class="n">${s.name}</div>: ${s.x},${s.y},${s.w},${s.h}<button onclick="sprites=sprites.filter(s=>s.name!=='${s.name}')">Remove</button></div>`).join("");
-            if (sprIn !== document.querySelector("#sprites").innerHTML) document.querySelector("#sprites").innerHTML = sprIn;
             const rects = document.querySelector("#rects");
             Array.from(rects.children).forEach(i => i.remove());
             sprites.forEach(s => {
@@ -364,8 +366,10 @@
         const y = startY();
         const w = endX() - startX();
         const h = endY() - startY();
-        sprites.push({enabled: false, name, x, y, w, h});
+        sprites.push({enabled: true, name, x, y, w, h});
         imgRect = [];
+        document.querySelector("#name").value = "";
+        updateSprites();
     };
     ["x", "y", "w", "h"].forEach(i => {
         const inp = document.querySelector("#" + i);
